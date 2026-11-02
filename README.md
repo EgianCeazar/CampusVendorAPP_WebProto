@@ -1,4 +1,4 @@
-# Campus Vendor Marketplace (Web Prototype v2)
+# Campus Vendor Marketplace (Web Prototype)
 
 Prototype of the "pay first, offline-first" flow for our PUP vendor marketplace.
 
@@ -26,6 +26,8 @@ Only **AVAILABLE** / **NOT AVAILABLE**. No stock counts. Vendors switch on what 
 
 ## Run it
 Open `index.html`, or use GitHub Pages (Settings → Pages → deploy from `main`).
+
+Use Github Page: https://egianceazar.github.io/CampusVendorAPP_WebProto/
 
 ## Files
 - `index.html`: the whole app
