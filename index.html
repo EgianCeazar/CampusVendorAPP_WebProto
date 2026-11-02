@@ -76,11 +76,11 @@ button.net{border:0;color:#fff;cursor:pointer;font:inherit;font-size:12px}
   <main id="main"></main>
   <div id="bar"></div>
 </div>
- 
+
 <script>
 const KEY = 'cvm-proto-v3';
 const SLOT_CAP = 5, SLOT_MIN = 15;
- 
+
 /* ---------- data ---------- */
 function seed() {
   const now = Date.now();
@@ -97,7 +97,7 @@ function seed() {
 function load() { try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) {} return seed(); }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
 let db = load();
- 
+
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
 const peso = n => '₱' + n;
@@ -110,21 +110,21 @@ function nowMin() { const d = new Date(); return d.getHours() * 60 + d.getMinute
 function dateKey(off) { const d = new Date(); d.setDate(d.getDate() + off); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function slotCount(vid, slot, date) { return db.orders.filter(o => o.vid === vid && o.slot === slot && o.pdate === date && !o.used).length; }
 function when(o) { return (o.pdate === dateKey(0) ? '' : o.pdate === dateKey(1) ? 'Tomorrow ' : o.pdate + ' ') + t12(o.slot); }
- 
+
 let ui = { role:'student', screen:'list', vid:null, cart:{}, q:'', cat:'All', method:'gcash', slot:null, ref:'', err:'', slip:null, myVendor:'v1', look:'', sim:false };
 const online = () => navigator.onLine && !ui.sim;
 function sync() { if (online()) { db.cache = { vendors: JSON.parse(JSON.stringify(db.vendors)), at: Date.now() }; save(); } }
 const total = () => Object.entries(ui.cart).reduce((s, [id, q]) => s + q * cached(ui.vid).items.find(i => i.id === id).price, 0);
 const count = () => Object.values(ui.cart).reduce((s, q) => s + q, 0);
 function go(screen, extra) { Object.assign(ui, { screen, err: '' }, extra || {}); render(); window.scrollTo(0, 0); }
- 
+
 /* ---------- views ---------- */
 function tabs() {
   $('#tabs').innerHTML = [['student', 'Student'], ['vendor', 'Vendor']].map(([r, l]) => `<button class="${ui.role === r ? 'on' : ''}" data-role="${r}">${l}</button>`).join('');
 }
 const offBanner = () => online() ? '' : `<div class="banner"><strong>Offline.</strong> Showing the menu saved ${ago(db.cache.at)}. You can browse and see payment details. Go online to pay and submit your order.</div>`;
 const badge = a => a ? '<span class="badge y">AVAILABLE</span>' : '<span class="badge n">NOT AVAILABLE</span>';
- 
+
 function viewList() {
   const vs = db.cache.vendors;
   const cats = ['All', ...new Set(vs.map(v => v.category))];
@@ -137,9 +137,9 @@ function viewList() {
       <span class="tag">${v.category}</span><span class="mute">${v.items.filter(i => i.available).length} available</span>${v.paused ? ' <span class="badge n">PAUSED</span>' : ''}
     </div><button class="link" data-vendor="${v.id}">View menu</button></div></div>`).join('') || '<div class="empty">No vendors match your search.</div>'}
   <button class="btn alt" data-go="orders">My order slips (${db.orders.filter(o => o.mine).length})</button>
-  <p class="mute" style="text-align:center">Demo tip: tap the Online badge at the top to simulate no signal.</p>`;
+  <p class="mute" style="text-align:center">Demo tip: tap the Online badge at the top to simulate no signal. · Prototype v5</p>`;
 }
- 
+
 function viewMenu() {
   const v = cached(ui.vid);
   return `${offBanner()}<button class="link" data-go="list">‹ All vendors</button>
@@ -149,7 +149,7 @@ function viewMenu() {
     ${i.available ? `<div class="qty"><button data-dec="${i.id}" aria-label="Remove one ${i.name}">−</button><span>${ui.cart[i.id] || 0}</span><button data-inc="${i.id}" aria-label="Add one ${i.name}">+</button></div>` : ''}
   </div>`).join('')}`;
 }
- 
+
 function viewCheckout() {
   const v = cached(ui.vid), now = nowMin();
   let slots = [], day = 0;
@@ -165,7 +165,8 @@ function viewCheckout() {
   ${ui.err ? `<div class="err">${ui.err}</div>` : ''}
   <div class="card">${lines}<hr style="border:0;border-top:1px solid var(--line)"><div class="row"><strong>Total</strong><strong>${peso(total())}</strong></div></div>
   <div class="card"><strong>1. Pick a pickup time</strong>
-    <select id="slot">${slots.map(m => { const c = slotCount(v.id, m, date), full = c >= SLOT_CAP; return `<option value="${m}" ${full ? 'disabled' : ''} ${ui.slot === m ? 'selected' : ''}>${day ? 'Tomorrow ' : ''}${t12(m)} (${full ? 'full' : c + '/' + SLOT_CAP + ' taken'})</option>`; }).join('')}</select></div>
+    <div class="chips" style="flex-wrap:wrap;overflow:visible;margin:8px 0 0">${slots.length ? slots.map(m => { const c = slotCount(v.id, m, date), full = c >= SLOT_CAP; return `<button class="chip ${ui.slot === m ? 'on' : ''}" data-slot="${m}" ${full ? 'disabled' : ''}>${t12(m)}${full ? ' · full' : ''}</button>`; }).join('') : '<span class="mute">No pickup times available.</span>'}</div>
+    <p class="mute" style="margin:6px 0 0">${day ? 'Tomorrow · ' : ''}Max ${SLOT_CAP} orders per time slot.</p></div>
   <div class="card"><strong>2. Send ${peso(total())} to the vendor</strong>
     <div class="qr">Vendor QR<br>(save to phone)</div>
     <div class="pm"><span>GCash</span><strong>${v.gcash}</strong></div><div class="pm"><span>PayMaya</span><strong>${v.maya}</strong></div>
@@ -176,7 +177,7 @@ function viewCheckout() {
   <button class="btn" data-submit ${ok ? '' : 'disabled'}>Submit order</button>
   ${online() ? '' : '<p class="mute" style="text-align:center">Needs internet to submit. Pay first, then submit when you have signal.</p>'}`;
 }
- 
+
 function slipHTML(o) {
   return `<div class="slip">
     <div style="text-align:center">${o.vname}</div><div class="code">${o.code}</div><div style="text-align:center">PICKUP ${when(o)}</div><hr>
@@ -193,7 +194,7 @@ function viewOrders() {
   return `<button class="link" data-go="list">‹ All vendors</button><h2>My order slips</h2>
   ${mine.map(o => `<div class="card row"><div><strong>${o.code}</strong> · ${o.vname}<br><span class="mute">${peso(o.total)} · pickup ${when(o)}${o.used ? ' · picked up' : ''}</span></div><button class="link" data-slip="${o.code}">Open</button></div>`).join('') || '<div class="empty">No slips yet.</div>'}`;
 }
- 
+
 function viewVendor() {
   const v = live(ui.myVendor);
   const mine = db.orders.filter(o => o.vid === v.id);
@@ -222,12 +223,12 @@ function viewVendor() {
     <div class="mute">${o.items.map(i => i.qty + ' × ' + i.name).join(', ')}</div></div>`).join('') || '<div class="empty">No orders yet. Make one from the Student tab.</div>'}
   <button class="link" data-reset>Reset demo data</button>`;
 }
- 
+
 function bar() {
   $('#bar').innerHTML = (ui.role === 'student' && ui.screen === 'menu' && count() > 0)
     ? `<div class="cartbar"><button class="btn" data-go="checkout">Checkout · ${count()} item${count() > 1 ? 's' : ''} · ${peso(total())}</button></div>` : '';
 }
- 
+
 function render() {
   sync(); tabs();
   const n = $('#net'); n.textContent = online() ? 'Online' : 'Offline'; n.className = 'net' + (online() ? '' : ' off');
@@ -236,7 +237,7 @@ function render() {
   bar();
   const q = $('#q'); if (q && ui._focusQ) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
 }
- 
+
 /* ---------- submit: re-check live menu first ---------- */
 function submitOrder() {
   if (!online()) return;
@@ -257,10 +258,10 @@ function submitOrder() {
     items: Object.entries(ui.cart).map(([id, q]) => { const i = v.items.find(x => x.id === id); return { name: i.name, price: i.price, qty: q }; }) };
   db.orders.push(o); save(); ui.cart = {}; ui.ref = ''; ui.slip = o; go('slip');
 }
- 
+
 /* ---------- events ---------- */
 document.addEventListener('click', e => {
-  const d = e.target.closest('[data-role],[data-cat],[data-vendor],[data-go],[data-inc],[data-dec],[data-submit],[data-slip],[data-used],[data-lookup],[data-reset],#net');
+  const d = e.target.closest('[data-role],[data-cat],[data-vendor],[data-go],[data-inc],[data-dec],[data-submit],[data-slot],[data-slip],[data-used],[data-lookup],[data-reset],#net');
   if (!d) return;
   if (d.id === 'net') { ui.sim = !ui.sim; return render(); }
   const ds = d.dataset;
@@ -271,6 +272,7 @@ document.addEventListener('click', e => {
   if (ds.inc) { ui.cart[ds.inc] = (ui.cart[ds.inc] || 0) + 1; return render(); }
   if (ds.dec) { const n = (ui.cart[ds.dec] || 0) - 1; if (n > 0) ui.cart[ds.dec] = n; else delete ui.cart[ds.dec]; return render(); }
   if (ds.submit !== undefined) return submitOrder();
+  if (ds.slot) { ui.slot = Number(ds.slot); return render(); }
   if (ds.slip) { ui.slip = db.orders.find(o => o.code === ds.slip); return go('slip'); }
   if (ds.lookup !== undefined) { ui.look = $('#look').value; return render(); }
   if (ds.used) { db.orders.find(o => o.code === ds.used).used = true; save(); return render(); }
@@ -289,7 +291,7 @@ document.addEventListener('change', e => {
   else if (t.dataset.avail) { const v = live(ui.myVendor); v.items.find(i => i.id === t.dataset.avail).available = t.checked; v.updated = Date.now(); save(); render(); }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'look') { ui.look = e.target.value; render(); } });
- 
+
 addEventListener('online', render); addEventListener('offline', render);
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 render();
