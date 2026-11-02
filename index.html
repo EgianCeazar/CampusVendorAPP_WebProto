@@ -165,8 +165,7 @@ function viewCheckout() {
   ${ui.err ? `<div class="err">${ui.err}</div>` : ''}
   <div class="card">${lines}<hr style="border:0;border-top:1px solid var(--line)"><div class="row"><strong>Total</strong><strong>${peso(total())}</strong></div></div>
   <div class="card"><strong>1. Pick a pickup time</strong>
-    <div class="chips" style="flex-wrap:wrap;overflow:visible;margin:8px 0 0">${slots.length ? slots.map(m => { const c = slotCount(v.id, m, date), full = c >= SLOT_CAP; return `<button class="chip ${ui.slot === m ? 'on' : ''}" data-slot="${m}" ${full ? 'disabled' : ''}>${t12(m)}${full ? ' · full' : ''}</button>`; }).join('') : '<span class="mute">No pickup times available.</span>'}</div>
-    <p class="mute" style="margin:6px 0 0">${day ? 'Tomorrow · ' : ''}Max ${SLOT_CAP} orders per time slot.</p></div>
+    <select id="slot">${slots.map(m => { const c = slotCount(v.id, m, date), full = c >= SLOT_CAP; return `<option value="${m}" ${full ? 'disabled' : ''} ${ui.slot === m ? 'selected' : ''}>${day ? 'Tomorrow ' : ''}${t12(m)} (${full ? 'full' : c + '/' + SLOT_CAP + ' taken'})</option>`; }).join('')}</select></div>
   <div class="card"><strong>2. Send ${peso(total())} to the vendor</strong>
     <div class="qr">Vendor QR<br>(save to phone)</div>
     <div class="pm"><span>GCash</span><strong>${v.gcash}</strong></div><div class="pm"><span>PayMaya</span><strong>${v.maya}</strong></div>
@@ -261,7 +260,7 @@ function submitOrder() {
 
 /* ---------- events ---------- */
 document.addEventListener('click', e => {
-  const d = e.target.closest('[data-role],[data-cat],[data-vendor],[data-go],[data-inc],[data-dec],[data-submit],[data-slot],[data-slip],[data-used],[data-lookup],[data-reset],#net');
+  const d = e.target.closest('[data-role],[data-cat],[data-vendor],[data-go],[data-inc],[data-dec],[data-submit],[data-slip],[data-used],[data-lookup],[data-reset],#net');
   if (!d) return;
   if (d.id === 'net') { ui.sim = !ui.sim; return render(); }
   const ds = d.dataset;
@@ -272,7 +271,6 @@ document.addEventListener('click', e => {
   if (ds.inc) { ui.cart[ds.inc] = (ui.cart[ds.inc] || 0) + 1; return render(); }
   if (ds.dec) { const n = (ui.cart[ds.dec] || 0) - 1; if (n > 0) ui.cart[ds.dec] = n; else delete ui.cart[ds.dec]; return render(); }
   if (ds.submit !== undefined) return submitOrder();
-  if (ds.slot) { ui.slot = Number(ds.slot); return render(); }
   if (ds.slip) { ui.slip = db.orders.find(o => o.code === ds.slip); return go('slip'); }
   if (ds.lookup !== undefined) { ui.look = $('#look').value; return render(); }
   if (ds.used) { db.orders.find(o => o.code === ds.used).used = true; save(); return render(); }
