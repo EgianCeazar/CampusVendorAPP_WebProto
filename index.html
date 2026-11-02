@@ -76,11 +76,11 @@ button.net{border:0;color:#fff;cursor:pointer;font:inherit;font-size:12px}
   <main id="main"></main>
   <div id="bar"></div>
 </div>
-
+ 
 <script>
-const KEY = 'cvm-proto-v2';
+const KEY = 'cvm-proto-v3';
 const SLOT_CAP = 5, SLOT_MIN = 15;
-
+ 
 /* ---------- data ---------- */
 function seed() {
   const now = Date.now();
@@ -97,7 +97,7 @@ function seed() {
 function load() { try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) {} return seed(); }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
 let db = load();
-
+ 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
 const peso = n => '₱' + n;
@@ -107,22 +107,24 @@ const cached = id => db.cache.vendors.find(v => v.id === id);
 function t12(m) { const h = Math.floor(m / 60), mm = String(m % 60).padStart(2, '0'); return ((h + 11) % 12 + 1) + ':' + mm + ' ' + (h >= 12 ? 'PM' : 'AM'); }
 function ago(ts) { const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' hr ago'; }
 function nowMin() { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
-function slotCount(vid, slot) { return db.orders.filter(o => o.vid === vid && o.slot === slot && !o.used).length; }
-
+function dateKey(off) { const d = new Date(); d.setDate(d.getDate() + off); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function slotCount(vid, slot, date) { return db.orders.filter(o => o.vid === vid && o.slot === slot && o.pdate === date && !o.used).length; }
+function when(o) { return (o.pdate === dateKey(0) ? '' : o.pdate === dateKey(1) ? 'Tomorrow ' : o.pdate + ' ') + t12(o.slot); }
+ 
 let ui = { role:'student', screen:'list', vid:null, cart:{}, q:'', cat:'All', method:'gcash', slot:null, ref:'', err:'', slip:null, myVendor:'v1', look:'', sim:false };
 const online = () => navigator.onLine && !ui.sim;
 function sync() { if (online()) { db.cache = { vendors: JSON.parse(JSON.stringify(db.vendors)), at: Date.now() }; save(); } }
 const total = () => Object.entries(ui.cart).reduce((s, [id, q]) => s + q * cached(ui.vid).items.find(i => i.id === id).price, 0);
 const count = () => Object.values(ui.cart).reduce((s, q) => s + q, 0);
 function go(screen, extra) { Object.assign(ui, { screen, err: '' }, extra || {}); render(); window.scrollTo(0, 0); }
-
+ 
 /* ---------- views ---------- */
 function tabs() {
   $('#tabs').innerHTML = [['student', 'Student'], ['vendor', 'Vendor']].map(([r, l]) => `<button class="${ui.role === r ? 'on' : ''}" data-role="${r}">${l}</button>`).join('');
 }
 const offBanner = () => online() ? '' : `<div class="banner"><strong>Offline.</strong> Showing the menu saved ${ago(db.cache.at)}. You can browse and see payment details. Go online to pay and submit your order.</div>`;
 const badge = a => a ? '<span class="badge y">AVAILABLE</span>' : '<span class="badge n">NOT AVAILABLE</span>';
-
+ 
 function viewList() {
   const vs = db.cache.vendors;
   const cats = ['All', ...new Set(vs.map(v => v.category))];
@@ -132,34 +134,38 @@ function viewList() {
   <div class="chips">${cats.map(c => `<button class="chip ${ui.cat === c ? 'on' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
   ${list.map(v => `<div class="card"><div class="row"><div>
       <strong>${v.name}</strong><br><span class="mute">${v.stall} · ${t12(v.open)}–${t12(v.close)}</span><br>
-      <span class="tag">${v.category}</span><span class="mute">${v.items.filter(i => i.available).length} available</span>
+      <span class="tag">${v.category}</span><span class="mute">${v.items.filter(i => i.available).length} available</span>${v.paused ? ' <span class="badge n">PAUSED</span>' : ''}
     </div><button class="link" data-vendor="${v.id}">View menu</button></div></div>`).join('') || '<div class="empty">No vendors match your search.</div>'}
   <button class="btn alt" data-go="orders">My order slips (${db.orders.filter(o => o.mine).length})</button>
   <p class="mute" style="text-align:center">Demo tip: tap the Online badge at the top to simulate no signal.</p>`;
 }
-
+ 
 function viewMenu() {
   const v = cached(ui.vid);
   return `${offBanner()}<button class="link" data-go="list">‹ All vendors</button>
-  <h2>${v.name}</h2><p class="mute">${v.stall} · menu saved ${ago(db.cache.at)}</p>
+  ${v.paused ? '<div class="banner"><strong>Not taking orders right now.</strong> You can still look at the menu.</div>' : ''}<h2>${v.name}</h2><p class="mute">${v.stall} · menu saved ${ago(db.cache.at)}</p>
   ${v.items.map(i => `<div class="card row ${i.available ? '' : 'soldout'}">
     <div><strong>${i.name}</strong> ${badge(i.available)}<br><span class="mute">${peso(i.price)}</span></div>
     ${i.available ? `<div class="qty"><button data-dec="${i.id}" aria-label="Remove one ${i.name}">−</button><span>${ui.cart[i.id] || 0}</span><button data-inc="${i.id}" aria-label="Add one ${i.name}">+</button></div>` : ''}
   </div>`).join('')}`;
 }
-
+ 
 function viewCheckout() {
   const v = cached(ui.vid), now = nowMin();
-  const slots = [];
-  for (let m = v.open; m < v.close; m += SLOT_MIN) if (m + SLOT_MIN > now) slots.push(m);
-  if (ui.slot == null || !slots.includes(ui.slot)) ui.slot = slots.find(m => slotCount(v.id, m) < SLOT_CAP) ?? null;
+  let slots = [], day = 0;
+  for (let m = v.open; m < v.close; m += SLOT_MIN) if (m > now) slots.push(m);       // only times that are still ahead
+  if (!slots.length) { day = 1; for (let m = v.open; m < v.close; m += SLOT_MIN) slots.push(m); }   // closed now: offer tomorrow
+  ui.day = day; const date = dateKey(day);
+  if (ui.slot == null || !slots.includes(ui.slot) || slotCount(v.id, ui.slot, date) >= SLOT_CAP) ui.slot = slots.find(m => slotCount(v.id, m, date) < SLOT_CAP) ?? null;
   const lines = Object.entries(ui.cart).map(([id, q]) => { const i = v.items.find(x => x.id === id); return `<div class="row"><span>${q} × ${i.name}</span><span>${peso(q * i.price)}</span></div>`; }).join('');
-  const ok = online() && ui.slot != null;
+  const ok = online() && ui.slot != null && !v.paused;
   return `${offBanner()}<button class="link" data-go="menu">‹ Back to menu</button><h2>Pay and order</h2>
+  ${v.paused ? '<div class="err">This vendor is not taking orders right now.</div>' : ''}
+  ${day ? '<div class="banner">This stall is closed for today. Pick a time for tomorrow.</div>' : ''}
   ${ui.err ? `<div class="err">${ui.err}</div>` : ''}
   <div class="card">${lines}<hr style="border:0;border-top:1px solid var(--line)"><div class="row"><strong>Total</strong><strong>${peso(total())}</strong></div></div>
   <div class="card"><strong>1. Pick a pickup time</strong>
-    <select id="slot">${slots.map(m => { const c = slotCount(v.id, m), full = c >= SLOT_CAP; return `<option value="${m}" ${full ? 'disabled' : ''} ${ui.slot === m ? 'selected' : ''}>${t12(m)} (${full ? 'full' : c + '/' + SLOT_CAP + ' taken'})</option>`; }).join('')}</select></div>
+    <select id="slot">${slots.map(m => { const c = slotCount(v.id, m, date), full = c >= SLOT_CAP; return `<option value="${m}" ${full ? 'disabled' : ''} ${ui.slot === m ? 'selected' : ''}>${day ? 'Tomorrow ' : ''}${t12(m)} (${full ? 'full' : c + '/' + SLOT_CAP + ' taken'})</option>`; }).join('')}</select></div>
   <div class="card"><strong>2. Send ${peso(total())} to the vendor</strong>
     <div class="qr">Vendor QR<br>(save to phone)</div>
     <div class="pm"><span>GCash</span><strong>${v.gcash}</strong></div><div class="pm"><span>PayMaya</span><strong>${v.maya}</strong></div>
@@ -170,10 +176,10 @@ function viewCheckout() {
   <button class="btn" data-submit ${ok ? '' : 'disabled'}>Submit order</button>
   ${online() ? '' : '<p class="mute" style="text-align:center">Needs internet to submit. Pay first, then submit when you have signal.</p>'}`;
 }
-
+ 
 function slipHTML(o) {
   return `<div class="slip">
-    <div style="text-align:center">${o.vname}</div><div class="code">${o.code}</div><div style="text-align:center">PICKUP ${t12(o.slot)}</div><hr>
+    <div style="text-align:center">${o.vname}</div><div class="code">${o.code}</div><div style="text-align:center">PICKUP ${when(o)}</div><hr>
     ${o.items.map(i => `<div class="r"><span>${i.qty} × ${i.name}</span><span>${peso(i.qty * i.price)}</span></div>`).join('')}<hr>
     <div class="r"><strong>TOTAL</strong><strong>${peso(o.total)}</strong></div>
     <div class="r"><span>${o.method === 'gcash' ? 'GCash' : 'PayMaya'} ref</span><span>${esc(o.ref)}</span></div><hr>
@@ -185,24 +191,25 @@ const viewSlip = () => `<h2>Order sent</h2><p class="mute">The vendor can see th
 function viewOrders() {
   const mine = db.orders.filter(o => o.mine).reverse();
   return `<button class="link" data-go="list">‹ All vendors</button><h2>My order slips</h2>
-  ${mine.map(o => `<div class="card row"><div><strong>${o.code}</strong> · ${o.vname}<br><span class="mute">${peso(o.total)} · pickup ${t12(o.slot)}${o.used ? ' · picked up' : ''}</span></div><button class="link" data-slip="${o.code}">Open</button></div>`).join('') || '<div class="empty">No slips yet.</div>'}`;
+  ${mine.map(o => `<div class="card row"><div><strong>${o.code}</strong> · ${o.vname}<br><span class="mute">${peso(o.total)} · pickup ${when(o)}${o.used ? ' · picked up' : ''}</span></div><button class="link" data-slip="${o.code}">Open</button></div>`).join('') || '<div class="empty">No slips yet.</div>'}`;
 }
-
+ 
 function viewVendor() {
   const v = live(ui.myVendor);
   const mine = db.orders.filter(o => o.vid === v.id);
-  const incoming = mine.filter(o => !o.used).sort((a, b) => a.slot - b.slot);
+  const incoming = mine.filter(o => !o.used).sort((a, b) => (a.pdate || '').localeCompare(b.pdate || '') || a.slot - b.slot);
   const found = ui.look ? mine.find(o => o.code.toLowerCase() === ui.look.trim().toLowerCase()) : null;
   let result = '';
   if (ui.look) result = !found ? `<div class="err">No order with code “${esc(ui.look)}” for this stall.</div>`
     : found.used ? `<div class="err"><strong>${found.code} was already picked up.</strong> Do not hand over again.</div>`
-    : `<div class="card"><div class="row"><strong>${found.code} · ${t12(found.slot)}</strong><span class="badge y">PAID</span></div>
+    : `<div class="card"><div class="row"><strong>${found.code} · ${when(found)}</strong><span class="badge y">PAID</span></div>
        <div class="mute">${found.items.map(i => i.qty + ' × ' + i.name).join(', ')}</div>
        <div>${peso(found.total)} · ${found.method === 'gcash' ? 'GCash' : 'PayMaya'} ref <strong>${esc(found.ref)}</strong></div>
        <button class="btn" style="margin-top:8px" data-used="${found.code}">Hand over and mark picked up</button></div>`;
   return `<h2>Vendor dashboard</h2>
   <select id="vsel">${db.vendors.map(x => `<option value="${x.id}" ${x.id === v.id ? 'selected' : ''}>${x.name}</option>`).join('')}</select>
   ${online() ? '' : '<div class="banner" style="margin-top:10px">You’re offline. New orders will show when your signal comes back.</div>'}
+  <div class="card row" style="margin-top:12px"><div><strong>Pause orders</strong><br><span class="mute">Students can’t submit new orders while this is on.</span></div><label class="sw"><input type="checkbox" data-pause ${v.paused ? 'checked' : ''} aria-label="Pause orders"><span></span></label></div>
   <h2 style="margin-top:16px">What’s cooking today</h2>
   <p class="mute">Switch on what you have. No stock counts. Updated ${ago(v.updated)}.</p>
   ${v.items.map(i => `<div class="card row"><div><strong>${i.name}</strong> ${badge(i.available)}<br><span class="mute">${peso(i.price)}</span></div>
@@ -211,16 +218,16 @@ function viewVendor() {
   <div class="row"><input id="look" placeholder="e.g. A-142" value="${esc(ui.look)}"><button class="btn" style="width:auto" data-lookup>Check</button></div>
   <div style="margin-top:10px">${result}</div>
   <h2 style="margin-top:16px">Paid orders to prepare (${incoming.length})</h2>
-  ${incoming.map(o => `<div class="card"><div class="row"><strong>${o.code} · ${t12(o.slot)}</strong><span class="mute">${peso(o.total)}</span></div>
+  ${incoming.map(o => `<div class="card"><div class="row"><strong>${o.code} · ${when(o)}</strong><span class="mute">${peso(o.total)}</span></div>
     <div class="mute">${o.items.map(i => i.qty + ' × ' + i.name).join(', ')}</div></div>`).join('') || '<div class="empty">No orders yet. Make one from the Student tab.</div>'}
   <button class="link" data-reset>Reset demo data</button>`;
 }
-
+ 
 function bar() {
   $('#bar').innerHTML = (ui.role === 'student' && ui.screen === 'menu' && count() > 0)
     ? `<div class="cartbar"><button class="btn" data-go="checkout">Checkout · ${count()} item${count() > 1 ? 's' : ''} · ${peso(total())}</button></div>` : '';
 }
-
+ 
 function render() {
   sync(); tabs();
   const n = $('#net'); n.textContent = online() ? 'Online' : 'Offline'; n.className = 'net' + (online() ? '' : ' off');
@@ -229,12 +236,13 @@ function render() {
   bar();
   const q = $('#q'); if (q && ui._focusQ) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
 }
-
+ 
 /* ---------- submit: re-check live menu first ---------- */
 function submitOrder() {
   if (!online()) return;
   sync();                                   // pull the latest menu (the one online step)
   const v = live(ui.vid);
+  if (v.paused) { ui.err = 'This vendor is not taking orders right now. Try again later.'; return go('checkout', { err: ui.err }); }
   const gone = Object.keys(ui.cart).filter(id => !v.items.find(i => i.id === id).available);
   if (gone.length) {
     const names = gone.map(id => v.items.find(i => i.id === id).name).join(', ');
@@ -243,13 +251,13 @@ function submitOrder() {
     return go(count() ? 'checkout' : 'menu', { err: ui.err });
   }
   if (!/^\d{6,}$/.test(ui.ref.replace(/\s/g, ''))) { ui.err = 'Enter the reference number from your payment receipt (digits only, at least 6).'; return render(); }
-  if (slotCount(v.id, ui.slot) >= SLOT_CAP) { ui.err = 'That pickup time just filled up. Choose another one.'; return render(); }
+  if (ui.slot == null || slotCount(v.id, ui.slot, dateKey(ui.day)) >= SLOT_CAP) { ui.err = 'That pickup time just filled up. Choose another one.'; return render(); }
   db.counter[v.id] = (db.counter[v.id] || 0) + 1;
-  const o = { code: v.prefix + '-' + db.counter[v.id], vid: v.id, vname: v.name, slot: ui.slot, method: ui.method, ref: ui.ref.trim(), total: total(), ts: Date.now(), used: false, mine: true,
+  const o = { code: v.prefix + '-' + db.counter[v.id], vid: v.id, vname: v.name, slot: ui.slot, pdate: dateKey(ui.day), method: ui.method, ref: ui.ref.trim(), total: total(), ts: Date.now(), used: false, mine: true,
     items: Object.entries(ui.cart).map(([id, q]) => { const i = v.items.find(x => x.id === id); return { name: i.name, price: i.price, qty: q }; }) };
   db.orders.push(o); save(); ui.cart = {}; ui.ref = ''; ui.slip = o; go('slip');
 }
-
+ 
 /* ---------- events ---------- */
 document.addEventListener('click', e => {
   const d = e.target.closest('[data-role],[data-cat],[data-vendor],[data-go],[data-inc],[data-dec],[data-submit],[data-slip],[data-used],[data-lookup],[data-reset],#net');
@@ -277,10 +285,11 @@ document.addEventListener('change', e => {
   if (t.name === 'method') { ui.method = t.value; render(); }
   else if (t.id === 'slot') ui.slot = Number(t.value);
   else if (t.id === 'vsel') { ui.myVendor = t.value; ui.look = ''; render(); }
+  else if (t.dataset.pause !== undefined) { const v = live(ui.myVendor); v.paused = t.checked; v.updated = Date.now(); save(); render(); }
   else if (t.dataset.avail) { const v = live(ui.myVendor); v.items.find(i => i.id === t.dataset.avail).available = t.checked; v.updated = Date.now(); save(); render(); }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'look') { ui.look = e.target.value; render(); } });
-
+ 
 addEventListener('online', render); addEventListener('offline', render);
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 render();
