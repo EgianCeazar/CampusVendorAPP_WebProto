@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#7a1f2b">
+<title>Campus Vendor Marketplace – Prototype</title>
+<style>
+:root{--maroon:#7a1f2b;--gold:#f2b705;--bg:#f2f3f5;--card:#fff;--ink:#1d1d22;--mute:#6b6b76;--line:#dcdde2;--ok:#1f7a45;--no:#b3261e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:90px}
+header{background:var(--maroon);color:#fff;padding:14px 16px 0;position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:18px;font-weight:700}
+.net{float:right;font-size:12px;padding:2px 8px;border-radius:99px;background:#ffffff26}
+.net.off{background:var(--gold);color:#3a2a00;font-weight:600}
+.tabs{display:flex;gap:4px;margin-top:10px}
+.tabs button{flex:1;border:0;background:transparent;color:#ffffffb3;padding:10px;font:inherit;font-weight:600;border-bottom:3px solid transparent;cursor:pointer}
+.tabs button.on{color:#fff;border-color:var(--gold)}
+main{padding:14px}
+h2{font-size:18px;margin:4px 0 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mute{color:var(--mute);font-size:14px}
+.tag{display:inline-block;font-size:12px;background:#f6e9eb;color:var(--maroon);border-radius:6px;padding:1px 7px;margin-right:4px}
+input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+.chips{display:flex;gap:6px;overflow-x:auto;margin:8px 0 12px;padding-bottom:2px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 14px;font:inherit;font-size:14px;white-space:nowrap;cursor:pointer}
+.chip.on{background:var(--maroon);color:#fff;border-color:var(--maroon)}
+button.btn{background:var(--maroon);color:#fff;border:0;border-radius:8px;padding:12px 16px;font:inherit;font-weight:600;cursor:pointer;width:100%}
+button.btn.alt{background:#fff;color:var(--maroon);border:1px solid var(--maroon)}
+button.link{background:none;border:0;color:var(--maroon);font:inherit;font-weight:600;padding:4px 0;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.qty{display:flex;align-items:center;gap:10px}
+.qty button{width:34px;height:34px;border-radius:50%;border:1px solid var(--maroon);background:#fff;color:var(--maroon);font-size:18px;cursor:pointer}
+.soldout{opacity:.5}
+.cartbar{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;padding:12px 14px;background:#fff;border-top:1px solid var(--line)}
+.sw{position:relative;width:48px;height:28px;flex:none}
+.sw input{opacity:0;position:absolute;inset:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}
+.sw span{position:absolute;inset:0;background:#c3c4cb;border-radius:99px;transition:.15s}
+.sw span::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.15s}
+.sw input:checked+span{background:var(--ok)}
+.sw input:checked+span::after{left:23px}
+.sw input:focus-visible+span{outline:3px solid var(--gold)}
+.pay{display:flex;gap:8px;margin:8px 0}
+.pay label{flex:1;border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center;cursor:pointer;background:#fff}
+.pay input{display:none}
+.pay label:has(input:checked){border-color:var(--maroon);background:#f6e9eb;font-weight:600}
+.qr{width:150px;height:150px;margin:8px auto;border:2px dashed var(--line);display:grid;place-items:center;color:var(--mute);font-size:13px;text-align:center;border-radius:8px}
+.slip{background:#fff;border:1px solid var(--line);border-radius:4px;padding:18px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;position:relative}
+.slip::before,.slip::after{content:"";position:absolute;left:0;right:0;height:8px;background:radial-gradient(circle at 6px 0,var(--bg) 5px,transparent 5.5px) 0 0/12px 8px repeat-x}
+.slip::before{top:-8px;transform:scaleY(-1)}
+.slip::after{bottom:-8px}
+.slip hr{border:0;border-top:1px dashed #999;margin:10px 0}
+.code{font-size:38px;font-weight:700;text-align:center;letter-spacing:2px;color:var(--maroon)}
+.slip .r{display:flex;justify-content:space-between;gap:8px}
+.empty{text-align:center;color:var(--mute);padding:26px 10px}
+.done{color:var(--ok);font-weight:600}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.badge{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;letter-spacing:.2px}
+.badge.y{background:#e2f3e8;color:var(--ok)}.badge.n{background:#f8e1df;color:var(--no)}
+.banner{background:#fff4d1;border:1px solid var(--gold);border-radius:8px;padding:10px;margin-bottom:10px;font-size:14px}
+.err{background:#f8e1df;border:1px solid var(--no);color:#6d130d;border-radius:8px;padding:10px;margin-bottom:10px;font-size:14px}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.net{border:0;color:#fff;cursor:pointer;font:inherit;font-size:12px}
+.pm{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <button class="net" id="net" title="Tap to simulate offline for the demo">Online</button>
+    <h1>Campus Vendor Marketplace</h1>
+    <div class="tabs" id="tabs"></div>
+  </header>
+  <main id="main"></main>
+  <div id="bar"></div>
+</div>
+
+<script>
+const KEY = 'cvm-proto-v2';
+const SLOT_CAP = 5, SLOT_MIN = 15;
+
+/* ---------- data ---------- */
+function seed() {
+  const now = Date.now();
+  const vendors = [
+    { id:'v1', prefix:'A', name:'Ate Linda’s Silog', stall:'Stall 3, Canteen', category:'Meals', open:420, close:1020, gcash:'0917 123 4567', maya:'0917 123 4567', updated:now,
+      items:[{id:'i1',name:'Menudo',price:60,available:true},{id:'i2',name:'Tapsilog',price:70,available:true},{id:'i3',name:'Tocilog',price:65,available:true},{id:'i4',name:'Extra rice',price:15,available:true}] },
+    { id:'v2', prefix:'B', name:'Kuya Ben’s Drinks', stall:'Stall 8, Lagoon side', category:'Drinks', open:480, close:1020, gcash:'0918 765 4321', maya:'0918 765 4321', updated:now,
+      items:[{id:'i1',name:'Iced tea',price:25,available:true},{id:'i2',name:'Buko juice',price:30,available:true},{id:'i3',name:'Iced coffee',price:35,available:true}] },
+    { id:'v3', prefix:'C', name:'Mang Tonyo’s Merienda', stall:'Stall 12, Canteen', category:'Snacks', open:540, close:960, gcash:'0920 111 2233', maya:'0920 111 2233', updated:now,
+      items:[{id:'i1',name:'Siomai (5 pcs)',price:35,available:true},{id:'i2',name:'Banana cue',price:15,available:true},{id:'i3',name:'Fishball',price:20,available:true}] }
+  ];
+  return { vendors, orders: [], counter: { v1:141, v2:87, v3:20 }, cache: { vendors: JSON.parse(JSON.stringify(vendors)), at: now } };
+}
+function load() { try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) {} return seed(); }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
+let db = load();
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const peso = n => '₱' + n;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const live = id => db.vendors.find(v => v.id === id);
+const cached = id => db.cache.vendors.find(v => v.id === id);
+function t12(m) { const h = Math.floor(m / 60), mm = String(m % 60).padStart(2, '0'); return ((h + 11) % 12 + 1) + ':' + mm + ' ' + (h >= 12 ? 'PM' : 'AM'); }
+function ago(ts) { const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' hr ago'; }
+function nowMin() { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+function slotCount(vid, slot) { return db.orders.filter(o => o.vid === vid && o.slot === slot && !o.used).length; }
+
+let ui = { role:'student', screen:'list', vid:null, cart:{}, q:'', cat:'All', method:'gcash', slot:null, ref:'', err:'', slip:null, myVendor:'v1', look:'', sim:false };
+const online = () => navigator.onLine && !ui.sim;
+function sync() { if (online()) { db.cache = { vendors: JSON.parse(JSON.stringify(db.vendors)), at: Date.now() }; save(); } }
+const total = () => Object.entries(ui.cart).reduce((s, [id, q]) => s + q * cached(ui.vid).items.find(i => i.id === id).price, 0);
+const count = () => Object.values(ui.cart).reduce((s, q) => s + q, 0);
+function go(screen, extra) { Object.assign(ui, { screen, err: '' }, extra || {}); render(); window.scrollTo(0, 0); }
+
+/* ---------- views ---------- */
+function tabs() {
+  $('#tabs').innerHTML = [['student', 'Student'], ['vendor', 'Vendor']].map(([r, l]) => `<button class="${ui.role === r ? 'on' : ''}" data-role="${r}">${l}</button>`).join('');
+}
+const offBanner = () => online() ? '' : `<div class="banner"><strong>Offline.</strong> Showing the menu saved ${ago(db.cache.at)}. You can browse and see payment details. Go online to pay and submit your order.</div>`;
+const badge = a => a ? '<span class="badge y">AVAILABLE</span>' : '<span class="badge n">NOT AVAILABLE</span>';
+
+function viewList() {
+  const vs = db.cache.vendors;
+  const cats = ['All', ...new Set(vs.map(v => v.category))];
+  const list = vs.filter(v => (ui.cat === 'All' || v.category === ui.cat) && (v.name + ' ' + v.items.map(i => i.name).join(' ')).toLowerCase().includes(ui.q.toLowerCase()));
+  return `${offBanner()}<h2>Find a vendor</h2>
+  <input id="q" type="search" placeholder="Search vendor or food (e.g. menudo)" value="${esc(ui.q)}">
+  <div class="chips">${cats.map(c => `<button class="chip ${ui.cat === c ? 'on' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
+  ${list.map(v => `<div class="card"><div class="row"><div>
+      <strong>${v.name}</strong><br><span class="mute">${v.stall} · ${t12(v.open)}–${t12(v.close)}</span><br>
+      <span class="tag">${v.category}</span><span class="mute">${v.items.filter(i => i.available).length} available</span>
+    </div><button class="link" data-vendor="${v.id}">View menu</button></div></div>`).join('') || '<div class="empty">No vendors match your search.</div>'}
+  <button class="btn alt" data-go="orders">My order slips (${db.orders.filter(o => o.mine).length})</button>
+  <p class="mute" style="text-align:center">Demo tip: tap the Online badge at the top to simulate no signal.</p>`;
+}
+
+function viewMenu() {
+  const v = cached(ui.vid);
+  return `${offBanner()}<button class="link" data-go="list">‹ All vendors</button>
+  <h2>${v.name}</h2><p class="mute">${v.stall} · menu saved ${ago(db.cache.at)}</p>
+  ${v.items.map(i => `<div class="card row ${i.available ? '' : 'soldout'}">
+    <div><strong>${i.name}</strong> ${badge(i.available)}<br><span class="mute">${peso(i.price)}</span></div>
+    ${i.available ? `<div class="qty"><button data-dec="${i.id}" aria-label="Remove one ${i.name}">−</button><span>${ui.cart[i.id] || 0}</span><button data-inc="${i.id}" aria-label="Add one ${i.name}">+</button></div>` : ''}
+  </div>`).join('')}`;
+}
+
+function viewCheckout() {
+  const v = cached(ui.vid), now = nowMin();
+  const slots = [];
+  for (let m = v.open; m < v.close; m += SLOT_MIN) if (m + SLOT_MIN > now) slots.push(m);
+  if (ui.slot == null || !slots.includes(ui.slot)) ui.slot = slots.find(m => slotCount(v.id, m) < SLOT_CAP) ?? null;
+  const lines = Object.entries(ui.cart).map(([id, q]) => { const i = v.items.find(x => x.id === id); return `<div class="row"><span>${q} × ${i.name}</span><span>${peso(q * i.price)}</span></div>`; }).join('');
+  const ok = online() && ui.slot != null;
+  return `${offBanner()}<button class="link" data-go="menu">‹ Back to menu</button><h2>Pay and order</h2>
+  ${ui.err ? `<div class="err">${ui.err}</div>` : ''}
+  <div class="card">${lines}<hr style="border:0;border-top:1px solid var(--line)"><div class="row"><strong>Total</strong><strong>${peso(total())}</strong></div></div>
+  <div class="card"><strong>1. Pick a pickup time</strong>
+    <select id="slot">${slots.map(m => { const c = slotCount(v.id, m), full = c >= SLOT_CAP; return `<option value="${m}" ${full ? 'disabled' : ''} ${ui.slot === m ? 'selected' : ''}>${t12(m)} (${full ? 'full' : c + '/' + SLOT_CAP + ' taken'})</option>`; }).join('')}</select></div>
+  <div class="card"><strong>2. Send ${peso(total())} to the vendor</strong>
+    <div class="qr">Vendor QR<br>(save to phone)</div>
+    <div class="pm"><span>GCash</span><strong>${v.gcash}</strong></div><div class="pm"><span>PayMaya</span><strong>${v.maya}</strong></div>
+    <p class="mute" style="margin:6px 0 0">This part works offline. Pay in your GCash or PayMaya app.</p></div>
+  <div class="card"><strong>3. Enter your payment details</strong>
+    <div class="pay"><label><input type="radio" name="method" value="gcash" ${ui.method === 'gcash' ? 'checked' : ''}>GCash</label><label><input type="radio" name="method" value="maya" ${ui.method === 'maya' ? 'checked' : ''}>PayMaya</label></div>
+    <input id="ref" inputmode="numeric" placeholder="Reference number from your receipt" value="${esc(ui.ref)}"></div>
+  <button class="btn" data-submit ${ok ? '' : 'disabled'}>Submit order</button>
+  ${online() ? '' : '<p class="mute" style="text-align:center">Needs internet to submit. Pay first, then submit when you have signal.</p>'}`;
+}
+
+function slipHTML(o) {
+  return `<div class="slip">
+    <div style="text-align:center">${o.vname}</div><div class="code">${o.code}</div><div style="text-align:center">PICKUP ${t12(o.slot)}</div><hr>
+    ${o.items.map(i => `<div class="r"><span>${i.qty} × ${i.name}</span><span>${peso(i.qty * i.price)}</span></div>`).join('')}<hr>
+    <div class="r"><strong>TOTAL</strong><strong>${peso(o.total)}</strong></div>
+    <div class="r"><span>${o.method === 'gcash' ? 'GCash' : 'PayMaya'} ref</span><span>${esc(o.ref)}</span></div><hr>
+    <div style="font-size:12px">Show this slip and your payment receipt at the stall.</div>
+    <div class="mute" style="font-size:12px;margin-top:4px">${new Date(o.ts).toLocaleString()}</div>
+    ${o.used ? '<div class="done" style="margin-top:6px">Picked up</div>' : ''}</div>`;
+}
+const viewSlip = () => `<h2>Order sent</h2><p class="mute">The vendor can see this order. Keep this slip, it also works offline.</p>${slipHTML(ui.slip)}<br><button class="btn" data-go="list">Back to vendors</button>`;
+function viewOrders() {
+  const mine = db.orders.filter(o => o.mine).reverse();
+  return `<button class="link" data-go="list">‹ All vendors</button><h2>My order slips</h2>
+  ${mine.map(o => `<div class="card row"><div><strong>${o.code}</strong> · ${o.vname}<br><span class="mute">${peso(o.total)} · pickup ${t12(o.slot)}${o.used ? ' · picked up' : ''}</span></div><button class="link" data-slip="${o.code}">Open</button></div>`).join('') || '<div class="empty">No slips yet.</div>'}`;
+}
+
+function viewVendor() {
+  const v = live(ui.myVendor);
+  const mine = db.orders.filter(o => o.vid === v.id);
+  const incoming = mine.filter(o => !o.used).sort((a, b) => a.slot - b.slot);
+  const found = ui.look ? mine.find(o => o.code.toLowerCase() === ui.look.trim().toLowerCase()) : null;
+  let result = '';
+  if (ui.look) result = !found ? `<div class="err">No order with code “${esc(ui.look)}” for this stall.</div>`
+    : found.used ? `<div class="err"><strong>${found.code} was already picked up.</strong> Do not hand over again.</div>`
+    : `<div class="card"><div class="row"><strong>${found.code} · ${t12(found.slot)}</strong><span class="badge y">PAID</span></div>
+       <div class="mute">${found.items.map(i => i.qty + ' × ' + i.name).join(', ')}</div>
+       <div>${peso(found.total)} · ${found.method === 'gcash' ? 'GCash' : 'PayMaya'} ref <strong>${esc(found.ref)}</strong></div>
+       <button class="btn" style="margin-top:8px" data-used="${found.code}">Hand over and mark picked up</button></div>`;
+  return `<h2>Vendor dashboard</h2>
+  <select id="vsel">${db.vendors.map(x => `<option value="${x.id}" ${x.id === v.id ? 'selected' : ''}>${x.name}</option>`).join('')}</select>
+  ${online() ? '' : '<div class="banner" style="margin-top:10px">You’re offline. New orders will show when your signal comes back.</div>'}
+  <h2 style="margin-top:16px">What’s cooking today</h2>
+  <p class="mute">Switch on what you have. No stock counts. Updated ${ago(v.updated)}.</p>
+  ${v.items.map(i => `<div class="card row"><div><strong>${i.name}</strong> ${badge(i.available)}<br><span class="mute">${peso(i.price)}</span></div>
+    <label class="sw"><input type="checkbox" data-avail="${i.id}" ${i.available ? 'checked' : ''} aria-label="${i.name} available"><span></span></label></div>`).join('')}
+  <h2 style="margin-top:16px">Check an order code</h2>
+  <div class="row"><input id="look" placeholder="e.g. A-142" value="${esc(ui.look)}"><button class="btn" style="width:auto" data-lookup>Check</button></div>
+  <div style="margin-top:10px">${result}</div>
+  <h2 style="margin-top:16px">Paid orders to prepare (${incoming.length})</h2>
+  ${incoming.map(o => `<div class="card"><div class="row"><strong>${o.code} · ${t12(o.slot)}</strong><span class="mute">${peso(o.total)}</span></div>
+    <div class="mute">${o.items.map(i => i.qty + ' × ' + i.name).join(', ')}</div></div>`).join('') || '<div class="empty">No orders yet. Make one from the Student tab.</div>'}
+  <button class="link" data-reset>Reset demo data</button>`;
+}
+
+function bar() {
+  $('#bar').innerHTML = (ui.role === 'student' && ui.screen === 'menu' && count() > 0)
+    ? `<div class="cartbar"><button class="btn" data-go="checkout">Checkout · ${count()} item${count() > 1 ? 's' : ''} · ${peso(total())}</button></div>` : '';
+}
+
+function render() {
+  sync(); tabs();
+  const n = $('#net'); n.textContent = online() ? 'Online' : 'Offline'; n.className = 'net' + (online() ? '' : ' off');
+  const views = { list: viewList, menu: viewMenu, checkout: viewCheckout, slip: viewSlip, orders: viewOrders };
+  $('#main').innerHTML = ui.role === 'vendor' ? viewVendor() : views[ui.screen]();
+  bar();
+  const q = $('#q'); if (q && ui._focusQ) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+}
+
+/* ---------- submit: re-check live menu first ---------- */
+function submitOrder() {
+  if (!online()) return;
+  sync();                                   // pull the latest menu (the one online step)
+  const v = live(ui.vid);
+  const gone = Object.keys(ui.cart).filter(id => !v.items.find(i => i.id === id).available);
+  if (gone.length) {
+    const names = gone.map(id => v.items.find(i => i.id === id).name).join(', ');
+    gone.forEach(id => delete ui.cart[id]);
+    ui.err = `${names} just ran out, so it was removed. You have not been charged by this app. Please check your cart.`;
+    return go(count() ? 'checkout' : 'menu', { err: ui.err });
+  }
+  if (!/^\d{6,}$/.test(ui.ref.replace(/\s/g, ''))) { ui.err = 'Enter the reference number from your payment receipt (digits only, at least 6).'; return render(); }
+  if (slotCount(v.id, ui.slot) >= SLOT_CAP) { ui.err = 'That pickup time just filled up. Choose another one.'; return render(); }
+  db.counter[v.id] = (db.counter[v.id] || 0) + 1;
+  const o = { code: v.prefix + '-' + db.counter[v.id], vid: v.id, vname: v.name, slot: ui.slot, method: ui.method, ref: ui.ref.trim(), total: total(), ts: Date.now(), used: false, mine: true,
+    items: Object.entries(ui.cart).map(([id, q]) => { const i = v.items.find(x => x.id === id); return { name: i.name, price: i.price, qty: q }; }) };
+  db.orders.push(o); save(); ui.cart = {}; ui.ref = ''; ui.slip = o; go('slip');
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const d = e.target.closest('[data-role],[data-cat],[data-vendor],[data-go],[data-inc],[data-dec],[data-submit],[data-slip],[data-used],[data-lookup],[data-reset],#net');
+  if (!d) return;
+  if (d.id === 'net') { ui.sim = !ui.sim; return render(); }
+  const ds = d.dataset;
+  if (ds.role) { ui.role = ds.role; if (ds.role === 'student') ui.screen = 'list'; return render(); }
+  if (ds.cat) { ui.cat = ds.cat; ui._focusQ = false; return render(); }
+  if (ds.vendor) { ui.cart = {}; return go('menu', { vid: ds.vendor }); }
+  if (ds.go) return go(ds.go);
+  if (ds.inc) { ui.cart[ds.inc] = (ui.cart[ds.inc] || 0) + 1; return render(); }
+  if (ds.dec) { const n = (ui.cart[ds.dec] || 0) - 1; if (n > 0) ui.cart[ds.dec] = n; else delete ui.cart[ds.dec]; return render(); }
+  if (ds.submit !== undefined) return submitOrder();
+  if (ds.slip) { ui.slip = db.orders.find(o => o.code === ds.slip); return go('slip'); }
+  if (ds.lookup !== undefined) { ui.look = $('#look').value; return render(); }
+  if (ds.used) { db.orders.find(o => o.code === ds.used).used = true; save(); return render(); }
+  if (ds.reset !== undefined) { db = seed(); save(); ui.cart = {}; ui.look = ''; return render(); }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'q') { ui.q = e.target.value; ui._focusQ = true; render(); }
+  if (e.target.id === 'ref') ui.ref = e.target.value;
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.name === 'method') { ui.method = t.value; render(); }
+  else if (t.id === 'slot') ui.slot = Number(t.value);
+  else if (t.id === 'vsel') { ui.myVendor = t.value; ui.look = ''; render(); }
+  else if (t.dataset.avail) { const v = live(ui.myVendor); v.items.find(i => i.id === t.dataset.avail).available = t.checked; v.updated = Date.now(); save(); render(); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'look') { ui.look = e.target.value; render(); } });
+
+addEventListener('online', render); addEventListener('offline', render);
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+render();
+</script>
+</body>
+</html>
